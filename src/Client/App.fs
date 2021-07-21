@@ -3,36 +3,41 @@ module App
 open Elmish
 open Elmish.React
 open Feliz
-open Feliz.Bulma
 open Common
 
 type Page =
     | Counter
-    | InputText
+    | Documents
+    | Financials
 
 type State = {
     Counter: Counter.State
-    InputText: InputText.State
+    Documents: Documents.State
+    Financials: Financials.State
     CurrentPage: Page
 }
 
 type Msg =
     | CounterMsg of Counter.Msg
-    | InputTextMsg of InputText.Msg
+    | DocumentsMsg of Documents.Msg
+    | FinancialsMsg of Financials.Msg
     | SwitchPage of Page
 
 let init() =
     let counterState, counterCmd = Counter.init()
-    let inputTextState, inputTextCmd = InputText.init()
+    let documentsState, documentsCmd = Documents.init()
+    let financialsState, financialsCmd = Financials.init()
 
     let initialState =
         { Counter = counterState;
-        InputText = inputTextState;
+        Documents = documentsState;
+        Financials = financialsState;
         CurrentPage = Page.Counter }
 
     let initialCmd = Cmd.batch [
         Cmd.map CounterMsg counterCmd
-        Cmd.map InputTextMsg inputTextCmd
+        Cmd.map DocumentsMsg documentsCmd
+        Cmd.map FinancialsMsg financialsCmd
     ]
 
     initialState, initialCmd
@@ -44,9 +49,15 @@ let update (msg: Msg) (state: State) =
         let appCmd = Cmd.map Msg.CounterMsg counterCmd
         { state with Counter = updatedCounter }, appCmd
 
-    | InputTextMsg textInputMsg ->
-        let updatedInputText, updateInputTextCmd = InputText.update textInputMsg state.InputText
-        { state with InputText = updatedInputText }, updateInputTextCmd
+    | DocumentsMsg documentsMsg ->
+        let updatedDocuments, documentsCmd = Documents.update documentsMsg state.Documents
+        let appCmd = Cmd.map Msg.DocumentsMsg documentsCmd
+        { state with Documents = updatedDocuments }, appCmd
+
+    | FinancialsMsg financialsMsg ->
+        let updatedFinancials, financialsCmd = Financials.update financialsMsg state.Financials
+        let appCmd = Cmd.map Msg.FinancialsMsg financialsCmd
+        { state with Financials = updatedFinancials }, appCmd
 
     | SwitchPage page ->
         { state with CurrentPage = page }, Cmd.none
@@ -65,18 +76,19 @@ let renderNavbar (state: State) (dispatch: Msg -> unit) =
         prop.className "navbar"
         prop.children [
             Html.a [
-                if state.CurrentPage = Page.InputText then prop.style [ style.fontWeight 700 ]
-                prop.onClick (fun _ -> dispatch (SwitchPage Page.InputText))
-                prop.text "Input Text"
-            ]
-            Html.a [
                 if state.CurrentPage = Page.Counter then prop.style [ style.fontWeight 700 ]
                 prop.onClick (fun _ -> dispatch (SwitchPage Page.Counter))
-                prop.text "Counter"
+                prop.text "Counters"
             ]
             Html.a [
-                prop.onClick (fun _ -> dispatch (SwitchPage Page.Counter))
+                if state.CurrentPage = Page.Documents then prop.style [ style.fontWeight 700 ]
+                prop.onClick (fun _ -> dispatch (SwitchPage Page.Documents))
                 prop.text "Documents"
+            ]
+            Html.a [
+                if state.CurrentPage = Page.Financials then prop.style [ style.fontWeight 700 ]
+                prop.onClick (fun _ -> dispatch (SwitchPage Page.Financials))
+                prop.text "Financials"
             ]
         ]
     ]
@@ -91,11 +103,19 @@ let render (state: State) (dispatch: Msg -> unit) =
             Counter.render state.Counter (CounterMsg >> dispatch)
         ]
 
-    | Page.InputText ->
+    | Page.Documents ->
         Html.div [
             renderTitle
             renderNavbar state dispatch
             divider
-            InputText.render state.InputText (InputTextMsg >> dispatch)
+            Documents.render state.Documents (DocumentsMsg >> dispatch)
+        ]
+
+    | Page.Financials ->
+        Html.div [
+            renderTitle
+            renderNavbar state dispatch
+            divider
+            Financials.render state.Financials (FinancialsMsg >> dispatch)
         ]
 

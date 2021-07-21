@@ -6,7 +6,8 @@
     <Compile Include="UIElements.fs" />
     <Compile Include="Common.fs" />
     <Compile Include="Counter.fs" />
-    <Compile Include="InputText.fs" />
+    <Compile Include="Documents.fs" />
+    <Compile Include="Financials.fs" />
     <Compile Include="App.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

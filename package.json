@@ -5,6 +5,7 @@
     "build": "webpack"
   },
   "dependencies": {
+    "bulma": "^0.9.3",
     "react": "^16.8.0",
     "react-dom": "^16.8.0"
   },

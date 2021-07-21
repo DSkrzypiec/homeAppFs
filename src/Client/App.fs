@@ -3,6 +3,7 @@ module App
 open Elmish
 open Elmish.React
 open Feliz
+open Feliz.Bulma
 open Common
 
 type Page =
@@ -50,26 +51,50 @@ let update (msg: Msg) (state: State) =
     | SwitchPage page ->
         { state with CurrentPage = page }, Cmd.none
 
+let renderTitle =
+    Html.div [
+        prop.className "AppTitle"
+        prop.style [ style.fontWeight.bold ]
+        prop.children [
+            Html.h1 "Home App F#"
+        ]
+    ]
+
+let renderNavbar (state: State) (dispatch: Msg -> unit) =
+    Html.div [
+        prop.className "navbar"
+        prop.children [
+            Html.a [
+                if state.CurrentPage = Page.InputText then prop.style [ style.fontWeight 700 ]
+                prop.onClick (fun _ -> dispatch (SwitchPage Page.InputText))
+                prop.text "Input Text"
+            ]
+            Html.a [
+                if state.CurrentPage = Page.Counter then prop.style [ style.fontWeight 700 ]
+                prop.onClick (fun _ -> dispatch (SwitchPage Page.Counter))
+                prop.text "Counter"
+            ]
+            Html.a [
+                prop.onClick (fun _ -> dispatch (SwitchPage Page.Counter))
+                prop.text "Documents"
+            ]
+        ]
+    ]
+
 let render (state: State) (dispatch: Msg -> unit) =
     match state.CurrentPage with
     | Page.Counter ->
         Html.div [
-            Html.button [
-                prop.onClick (fun _ -> dispatch (SwitchPage Page.InputText))
-                prop.text "Show text input"
-            ]
-
+            renderTitle
+            renderNavbar state dispatch
             divider
             Counter.render state.Counter (CounterMsg >> dispatch)
         ]
 
     | Page.InputText ->
         Html.div [
-            Html.button [
-                prop.onClick (fun _ -> dispatch (SwitchPage Page.Counter))
-                prop.text "Show counter"
-            ]
-
+            renderTitle
+            renderNavbar state dispatch
             divider
             InputText.render state.InputText (InputTextMsg >> dispatch)
         ]

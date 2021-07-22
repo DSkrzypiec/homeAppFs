@@ -1,6 +1,5 @@
 module Counter
 
-open System
 open Elmish
 open Elmish.React
 open Feliz
@@ -22,10 +21,11 @@ type CounterView =
 type State = {
     CurrentView: CounterView
     WaterTable: MockWater list
-    UploadDate: string
-    UploadColdWater: int
-    UploadHotWater: int
-    UploadEnergy: double
+    UploadDate: string option
+    UploadColdWater: int option
+    UploadHotWater: int option
+    UploadEnergy: string option
+    UploadError: string option
 }
 
 type Msg =
@@ -33,16 +33,35 @@ type Msg =
     | SetUploadDate of string
     | SetUploadColdWater of int
     | SetUploadHotWater of int
-    | SetUploadEnergy of double
+    | SetUploadEnergy of string
     | SubmitUpload
+    | HideUploadError
 
 let init() = {
     CurrentView = PresentCounters
     WaterTable = initMockWater
-    UploadDate = (DateTime.Today.ToString())
-    UploadColdWater = 0
-    UploadHotWater = 0
-    UploadEnergy = 0.0 }, Cmd.none
+    UploadDate = None
+    UploadColdWater = None
+    UploadHotWater = None
+    UploadEnergy = None
+    UploadError = None }, Cmd.none
+
+module validateUpload =
+    let date (date: string option) =
+        match date with
+        | None -> Error "Date field cannot be empty"
+        | Some dateValue ->
+            if dateValue.[4] <> '-' ||  dateValue.[7] <> '-'
+            then Error "Date should be in YYYY-MM-DD format"
+            else Ok dateValue
+
+let delayedHideUploadError (duration: int) (dispatch: Msg -> unit) =
+    let delayedCmd = async {
+        do! Async.Sleep duration
+        dispatch HideUploadError
+    }
+
+    Async.StartImmediate delayedCmd
 
 let update (counterMsg: Msg) (counterState: State) =
     match counterMsg with
@@ -51,28 +70,45 @@ let update (counterMsg: Msg) (counterState: State) =
         { counterState with CurrentView = newView }, Cmd.none
 
     | SetUploadDate date -> 
-        { counterState with UploadDate = date }, Cmd.none
+        { counterState with UploadDate = Some date }, Cmd.none
 
     | SetUploadColdWater coldWater ->
-        { counterState with UploadColdWater = coldWater }, Cmd.none
+        { counterState with UploadColdWater = Some coldWater }, Cmd.none
 
     | SetUploadHotWater hotWater ->
-        { counterState with UploadHotWater = hotWater }, Cmd.none
+        { counterState with UploadHotWater = Some hotWater }, Cmd.none
 
     | SetUploadEnergy energy ->
-        { counterState with UploadEnergy = energy }, Cmd.none
+        { counterState with UploadEnergy = Some energy }, Cmd.none
+
+    | HideUploadError ->
+        { counterState with UploadError = None }, Cmd.none
 
     | SubmitUpload ->
-        let newWater = {
-            Date = counterState.UploadDate
-            ColdWater = counterState.UploadColdWater
-            HotWater = counterState.UploadHotWater
-        }
-        {
-            counterState with 
-                CurrentView = PresentCounters
-                WaterTable = List.append counterState.WaterTable [newWater]
-        }, Cmd.none
+        (* TODO: Error Validation Monad*)
+        match validateUpload.date counterState.UploadDate with
+        | Error errMsg -> { counterState with 
+                                UploadError = Some errMsg
+                                UploadDate = None }, Cmd.ofSub (delayedHideUploadError 5000)
+        | Ok dateValue -> 
+            let newWater = {
+                Date = dateValue
+                ColdWater = match counterState.UploadColdWater with
+                            | Some coldWater -> coldWater
+                            | None -> 0
+                HotWater = match counterState.UploadHotWater with
+                           | Some hotWater -> hotWater
+                           | None -> 0
+            }
+            {
+                counterState with 
+                    CurrentView = PresentCounters
+                    WaterTable = List.append counterState.WaterTable [newWater]
+                    UploadDate = None
+                    UploadColdWater = None
+                    UploadHotWater = None
+                    UploadEnergy = None
+            }, Cmd.none
 
 let renderWaterTableRows (waterTableRows: MockWater list) =
     let header = seq {
@@ -136,7 +172,7 @@ let renderUploadEnergyInput (dispatch: Msg -> unit) =
             Bulma.input.text [
                 prop.required true
                 prop.placeholder "Energy in kWh"
-                prop.onChange (double >> SetUploadEnergy >> dispatch)
+                prop.onChange (SetUploadEnergy >> dispatch)
             ]
         ]
     ]
@@ -171,6 +207,19 @@ let renderUploadForm (dispatch: Msg -> unit) =
         ]
     ]
 
+let renderUploadError (state: State) (dispatch: Msg -> unit) =
+    match state.UploadError with
+    | Some errMsg ->
+        Bulma.message [
+            Bulma.color.isDanger
+            prop.children [
+                Bulma.messageHeader [
+                    Html.p errMsg
+                ]
+            ]
+        ]
+    | None -> Html.none
+
 let render (state: State) (dispatch: Msg -> unit) =
     match state.CurrentView with
     | PresentCounters ->
@@ -198,6 +247,7 @@ let render (state: State) (dispatch: Msg -> unit) =
 
     | UploadCounters ->
         Bulma.container [
+            renderUploadError state dispatch
             Html.div [
                 prop.style [ style.marginBottom 20 ]
                 prop.children [

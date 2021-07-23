@@ -4,7 +4,19 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Configuration.fs" />
+    <Compile Include="Sqlite.fs" />
+    <Compile Include="DB.fs" />
     <Compile Include="Validation.fs" />
     <Compile Include="Counters.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FSharp.Data" Version="4.1.1" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.114.4" />
   </ItemGroup>
 </Project>

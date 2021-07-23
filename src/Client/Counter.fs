@@ -5,6 +5,7 @@ open Elmish.React
 open Feliz
 open Feliz.Bulma
 open Common
+open Server.Counters
 
 type MockWater = { Date: string; ColdWater: int; HotWater: int }
 
@@ -46,15 +47,6 @@ let init() = {
     UploadEnergy = None
     UploadError = None }, Cmd.none
 
-module validateUpload =
-    let date (date: string option) =
-        match date with
-        | None -> Error "Date field cannot be empty"
-        | Some dateValue ->
-            if dateValue.[4] <> '-' ||  dateValue.[7] <> '-'
-            then Error "Date should be in YYYY-MM-DD format"
-            else Ok dateValue
-
 let delayedHideUploadError (duration: int) (dispatch: Msg -> unit) =
     let delayedCmd = async {
         do! Async.Sleep duration
@@ -66,10 +58,10 @@ let delayedHideUploadError (duration: int) (dispatch: Msg -> unit) =
 let update (counterMsg: Msg) (counterState: State) =
     match counterMsg with
     | ChangeView ->
-        let newView = if counterState.CurrentView = PresentCounters then UploadCounters else PresentCounters 
+        let newView = if counterState.CurrentView = PresentCounters then UploadCounters else PresentCounters
         { counterState with CurrentView = newView }, Cmd.none
 
-    | SetUploadDate date -> 
+    | SetUploadDate date ->
         { counterState with UploadDate = Some date }, Cmd.none
 
     | SetUploadColdWater coldWater ->
@@ -85,23 +77,25 @@ let update (counterMsg: Msg) (counterState: State) =
         { counterState with UploadError = None }, Cmd.none
 
     | SubmitUpload ->
-        (* TODO: Error Validation Monad*)
-        match validateUpload.date counterState.UploadDate with
-        | Error errMsg -> { counterState with 
-                                UploadError = Some errMsg
-                                UploadDate = None }, Cmd.ofSub (delayedHideUploadError 5000)
-        | Ok dateValue -> 
+        let validationResult = Counters.validateCountersUpload {
+            Date = counterState.UploadDate
+            ColdWater = counterState.UploadColdWater
+            HotWater = counterState.UploadHotWater
+            Energy = counterState.UploadEnergy
+        }
+
+        match validationResult with
+        | Error errors ->
+            { counterState with
+                UploadError = Some (errors |> List.fold (fun a b -> a + "\n" + b) "") }, Cmd.ofSub (delayedHideUploadError 5000)
+        | Ok counters ->
             let newWater = {
-                Date = dateValue
-                ColdWater = match counterState.UploadColdWater with
-                            | Some coldWater -> coldWater
-                            | None -> 0
-                HotWater = match counterState.UploadHotWater with
-                           | Some hotWater -> hotWater
-                           | None -> 0
+                Date = counters.Date
+                ColdWater = counters.ColdWater
+                HotWater = counters.HotWater
             }
             {
-                counterState with 
+                counterState with
                     CurrentView = PresentCounters
                     WaterTable = List.append counterState.WaterTable [newWater]
                     UploadDate = None
@@ -186,7 +180,7 @@ let renderUploadSubmitButton (dispatch: Msg -> unit) =
                 Bulma.button.button [
                     Bulma.color.isLink
                     prop.text "Submit"
-                    prop.onClick (fun event -> 
+                    prop.onClick (fun event ->
                         event.preventDefault()
                         dispatch SubmitUpload
                     )

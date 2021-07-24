@@ -1,4 +1,4 @@
-namespace Server.Validation
+namespace Client.Validation
 
 type Result<'T> = Result<'T, string list>
 

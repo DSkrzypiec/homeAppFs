@@ -3,8 +3,10 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Validation.fs" />
     <Compile Include="UIElements.fs" />
     <Compile Include="Common.fs" />
+    <Compile Include="CounterValidation.fs" />
     <Compile Include="Counter.fs" />
     <Compile Include="Documents.fs" />
     <Compile Include="Financials.fs" />

@@ -7,7 +7,6 @@
     <Compile Include="Configuration.fs" />
     <Compile Include="Sqlite.fs" />
     <Compile Include="DB.fs" />
-    <Compile Include="Validation.fs" />
     <Compile Include="Counters.fs" />
   </ItemGroup>
   <ItemGroup>

@@ -5,7 +5,7 @@ open Elmish.React
 open Feliz
 open Feliz.Bulma
 open Common
-open Server.Counters
+open Client.CounterValidation
 
 type MockWater = { Date: string; ColdWater: int; HotWater: int }
 

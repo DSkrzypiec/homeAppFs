@@ -4,6 +4,7 @@ open Elmish
 open Elmish.React
 open Feliz
 open Feliz.Bulma
+open Fable.SimpleHttp
 open Common
 open Client.CounterValidation
 
@@ -27,6 +28,7 @@ type State = {
     UploadHotWater: int option
     UploadEnergy: string option
     UploadError: string option
+    TestMsg: string option
 }
 
 type Msg =
@@ -35,6 +37,7 @@ type Msg =
     | SetUploadColdWater of int
     | SetUploadHotWater of int
     | SetUploadEnergy of string
+    | SetTest of string
     | SubmitUpload
     | HideUploadError
 
@@ -45,7 +48,8 @@ let init() = {
     UploadColdWater = None
     UploadHotWater = None
     UploadEnergy = None
-    UploadError = None }, Cmd.none
+    UploadError = None
+    TestMsg = None }, Cmd.none
 
 let delayedHideUploadError (duration: int) (dispatch: Msg -> unit) =
     let delayedCmd = async {
@@ -54,6 +58,20 @@ let delayedHideUploadError (duration: int) (dispatch: Msg -> unit) =
     }
 
     Async.StartImmediate delayedCmd
+
+let askApiTest (dispatch: Msg -> unit) =
+    let responseCmd = async {
+        let! response =
+            Http.request "https://localhost:5001/water/25"
+            |> Http.method GET
+            |> Http.send
+
+        match response.statusCode with
+        | 200 -> dispatch (SetTest response.responseText)
+        | _ -> dispatch (SetTest (sprintf "Error while asking API for /water/25: %s" response.responseText))
+    }
+
+    Async.StartImmediate responseCmd
 
 let update (counterMsg: Msg) (counterState: State) =
     match counterMsg with
@@ -72,6 +90,9 @@ let update (counterMsg: Msg) (counterState: State) =
 
     | SetUploadEnergy energy ->
         { counterState with UploadEnergy = Some energy }, Cmd.none
+
+    | SetTest msg ->
+        { counterState with TestMsg = Some msg }, Cmd.none
 
     | HideUploadError ->
         { counterState with UploadError = None }, Cmd.none
@@ -102,7 +123,7 @@ let update (counterMsg: Msg) (counterState: State) =
                     UploadColdWater = None
                     UploadHotWater = None
                     UploadEnergy = None
-            }, Cmd.none
+            }, Cmd.ofSub askApiTest
 
 let renderWaterTableRows (waterTableRows: MockWater list) =
     let header = seq {
@@ -214,10 +235,27 @@ let renderUploadError (state: State) (dispatch: Msg -> unit) =
         ]
     | None -> Html.none
 
+let renderTestMsg (state: State) =
+    match state.TestMsg with
+    | Some msg ->
+        Bulma.message [
+            Bulma.color.isInfo
+            prop.children [
+                Bulma.messageHeader [
+                    Html.p "API TEST"
+                ]
+                Bulma.messageBody [
+                    Html.p msg
+                ]
+            ]
+        ]
+    | None -> Html.none
+
 let render (state: State) (dispatch: Msg -> unit) =
     match state.CurrentView with
     | PresentCounters ->
         Bulma.container [
+            renderTestMsg state
             Html.div [
                 prop.style [ style.marginBottom 20 ]
                 prop.children [
